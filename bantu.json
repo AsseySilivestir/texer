@@ -1,0 +1,9 @@
+{
+  "name": "texer",
+  "version": "1.0.0",
+  "entry": "main.b",
+  "template": "web",
+  "language": "bantu",
+  "bantuVersion": "1.2.2",
+  "dependencies": {}
+}

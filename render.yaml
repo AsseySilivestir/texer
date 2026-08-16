@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: texer
+    runtime: docker
+    plan: free
+    region: ohio
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 8080
+    disk:
+      name: texer-data
+      mountPath: /data
+      sizeGB: 1

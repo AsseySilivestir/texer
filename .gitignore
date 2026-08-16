@@ -1,0 +1,19 @@
+# Bantu / Sua local artifacts
+*.db
+*.db-wal
+*.db-shm
+.env
+.env.local
+.DS_Store
+*.log
+node_modules/
+
+# Build artifacts
+bantu-src/compiler/build/
+
+# Editor / OS junk
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
