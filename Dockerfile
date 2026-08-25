@@ -24,29 +24,47 @@ FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
 
+# Runtime libs + build tools (needed to compile libcurl-gnutls from source)
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         libsqlite3-0 \
-        libcurl4t64 \
         ca-certificates \
         sqlite3 \
-        patchelf \
+        build-essential \
+        libgnutls28-dev \
+        pkg-config \
+        wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Build libcurl with GnuTLS backend from source.
+# Ubuntu 24.04 no longer ships libcurl-gnutls, but the Bantu binary
+# requires CURL_GNUTLS_3 symbols only found in the GnuTLS build.
+RUN cd /tmp \
+    && wget -q https://curl.se/download/curl-8.5.0.tar.gz \
+    && tar xzf curl-8.5.0.tar.gz \
+    && cd curl-8.5.0 \
+    && ./configure --with-gnutls --without-openssl --disable-docs --disable-manual \
+    && make -j"$(nproc)" \
+    && make install \
+    && ldconfig \
+    && ln -sf /usr/local/lib/libcurl.so.4 /usr/local/lib/libcurl-gnutls.so.4 \
+    && rm -rf /tmp/curl-*
+
+# Clean up build tools to reduce image size
+RUN apt-get purge -y --auto-remove build-essential libgnutls28-dev pkg-config wget \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 COPY --from=builder /build/bantu /usr/local/bin/bantu
-
-# The binary was linked against libcurl-gnutls, but Ubuntu 24.04 only
-# ships libcurl4t64 (OpenSSL backend).  patchelf re-points the DT_NEEDED
-# entry so the linker loads the available libcurl.so.4 instead.
-RUN patchelf --replace-needed libcurl-gnutls.so.4 libcurl.so.4 /usr/local/bin/bantu
-
 COPY main.b /app/main.b
 COPY bantu.json /app/bantu.json
 COPY public/ /app/public/
 
 RUN mkdir -p /data && chmod 777 /data
+
+# Ensure the custom-built libcurl-gnutls is found first
+ENV LD_LIBRARY_PATH=/usr/local/lib
 
 # Pre-flight: verify the binary links correctly and starts
 RUN ldd /usr/local/bin/bantu && /usr/local/bin/bantu --version
