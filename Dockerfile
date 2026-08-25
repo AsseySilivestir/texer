@@ -18,7 +18,7 @@ RUN git clone https://github.com/AsseySilivestir/Bantu.git bantu-repo \
 
 
 # ─── Stage 2: Runtime ─────────────────────────────────────────
-# Must use Ubuntu 24.04 — the binary needs GLIBCXX_3.4.32 (newer libstdc++)
+# Ubuntu 24.04 for GLIBCXX_3.4.32 (needed by the Bantu binary)
 FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -27,23 +27,28 @@ ENV TZ=UTC
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         libsqlite3-0 \
-        libcurl4-gnutls \
+        libcurl4t64 \
         ca-certificates \
         sqlite3 \
+        patchelf \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 COPY --from=builder /build/bantu /usr/local/bin/bantu
+
+# The binary was linked against libcurl-gnutls, but Ubuntu 24.04 only
+# ships libcurl4t64 (OpenSSL backend).  patchelf re-points the DT_NEEDED
+# entry so the linker loads the available libcurl.so.4 instead.
+RUN patchelf --replace-needed libcurl-gnutls.so.4 libcurl.so.4 /usr/local/bin/bantu
+
 COPY main.b /app/main.b
 COPY bantu.json /app/bantu.json
 COPY public/ /app/public/
 
-RUN chmod +x /usr/local/bin/bantu
-
 RUN mkdir -p /data && chmod 777 /data
 
-# Pre-flight: verify the binary works
+# Pre-flight: verify the binary links correctly and starts
 RUN ldd /usr/local/bin/bantu && /usr/local/bin/bantu --version
 
 # Railway injects $PORT — default to 8080 for local testing
