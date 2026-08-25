@@ -524,13 +524,18 @@ label{display:block;font-size:.8rem;font-weight:500;color:var(--muted);margin-bo
 
   // ─── TURN config ────────────────────────────────────────
   async function getTurnConfig() {
+    // 1) Use Bantu's embedded TURN server (recommended)
     try {
       const r = await api('/api/turn/credentials');
-      if (r.data && r.data.iceServers) return { iceServers: r.data.iceServers };
-    } catch {}
-    // Fallback: multiple STUN servers + free TURN relay.
-    // For production, implement /api/turn/credentials with a real TURN provider
-    // (Metered.ca, Twilio, Xirsys, or self-hosted coturn).
+      if (r.data && r.data.iceServers) {
+        console.log('[WebRTC] Using Bantu embedded TURN:', r.data.iceServers);
+        return { iceServers: r.data.iceServers };
+      }
+    } catch (e) {
+      console.warn('[WebRTC] /api/turn/credentials failed:', e);
+    }
+    // 2) Fallback: STUN-only (no relay — calls may fail behind symmetric NATs)
+    console.warn('[WebRTC] TURN unavailable, falling back to STUN-only');
     return {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -539,23 +544,7 @@ label{display:block;font-size:.8rem;font-weight:500;color:var(--muted);margin-bo
         { urls: 'stun:stun3.l.google.com:19302' },
         { urls: 'stun:stun4.l.google.com:19302' },
         { urls: 'stun:stun.stunprotocol.org:3478' },
-        { urls: 'stun:global.stun.twilio.com:3478' },
-        // Free TURN relay (Metered.ca) — replace with your own credentials for production
-        {
-          urls: 'turn:a.relay.metered.ca:80',
-          username: 'e2dd9f1b2e06c47d0e3c6f4a',
-          credential: 'RJlT3k+9xRH+4WpX'
-        },
-        {
-          urls: 'turn:a.relay.metered.ca:443',
-          username: 'e2dd9f1b2e06c47d0e3c6f4a',
-          credential: 'RJlT3k+9xRH+4WpX'
-        },
-        {
-          urls: 'turn:a.relay.metered.ca:443?transport=tcp',
-          username: 'e2dd9f1b2e06c47d0e3c6f4a',
-          credential: 'RJlT3k+9xRH+4WpX'
-        }
+        { urls: 'stun:global.stun.twilio.com:3478' }
       ]
     };
   }
