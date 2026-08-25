@@ -1,5 +1,5 @@
 # ─── Stage 1: Download the pre-built Bantu binary ───────────
-FROM ubuntu:22.04 AS builder
+FROM ubuntu:24.04 AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -18,7 +18,8 @@ RUN git clone https://github.com/AsseySilivestir/Bantu.git bantu-repo \
 
 
 # ─── Stage 2: Runtime ─────────────────────────────────────────
-FROM ubuntu:22.04
+# Must use Ubuntu 24.04 — the binary needs GLIBCXX_3.4.32 (newer libstdc++)
+FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
@@ -26,7 +27,7 @@ ENV TZ=UTC
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         libsqlite3-0 \
-        libcurl4 \
+        libcurl4-gnutls \
         ca-certificates \
         sqlite3 \
     && rm -rf /var/lib/apt/lists/*
