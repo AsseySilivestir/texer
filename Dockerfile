@@ -1,4 +1,4 @@
-# ─── Stage 1: Build the Bantu binary ──────────────────────────
+# ─── Stage 1: Build the Bantu compiler from source ───────────
 FROM ubuntu:24.04 AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -11,6 +11,7 @@ RUN apt-get update \
         make \
         binutils \
         file \
+        git \
         libsqlite3-dev \
         libcurl4-openssl-dev \
         ca-certificates \
@@ -18,9 +19,9 @@ RUN apt-get update \
 
 WORKDIR /build
 
-COPY bantu-src/compiler/ /build/compiler/
-
-RUN cd /build/compiler \
+# Clone the Bantu compiler and build it
+RUN git clone https://github.com/AsseySilivestir/Bantu.git bantu-src \
+    && cd /build/bantu-src/compiler \
     && chmod +x build.sh \
     && ./build.sh \
     && cp build/bantu /build/bantu
@@ -44,12 +45,16 @@ WORKDIR /app
 
 COPY --from=builder /build/bantu /usr/local/bin/bantu
 COPY main.b /app/main.b
+COPY bantu.json /app/bantu.json
 COPY public/ /app/public/
+
+RUN chmod +x /usr/local/bin/bantu
 
 RUN mkdir -p /data && chmod 777 /data
 
+# Railway injects $PORT — default to 8080 for local testing
 ENV PORT=8080
 
-EXPOSE 8080
+EXPOSE ${PORT}
 
 CMD ["bantu", "run", "main.b"]

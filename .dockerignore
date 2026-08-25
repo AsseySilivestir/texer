@@ -1,0 +1,10 @@
+.git
+.gitignore
+*.md
+start.bat
+render.yaml
+.DS_Store
+node_modules
+data/
+__pycache__
+*.log
